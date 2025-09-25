@@ -8,26 +8,27 @@ const authRoutes = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware de CORS - configurado para desarrollo y producción
+// Middleware de CORS - Permitir todo para solucionar problemas
 app.use(cors({
-    origin: [
-        'http://localhost:5500', 
-        'http://127.0.0.1:5500', 
-        'http://localhost:3000',
-        'http://localhost:8000',
-        'http://127.0.0.1:8080',
-        'http://localhost:8080',
-        'https://localhost:5500',
-        'file://',
-        // Permitir cualquier subdominio de vercel para testing
-        /^https:\/\/.*\.vercel\.app$/,
-        // Permitir acceso desde archivos locales
-        null
-    ],
+    origin: true, // Permitir cualquier origen durante desarrollo
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    optionsSuccessStatus: 200
 }));
+
+// Headers adicionales para CORS
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+    } else {
+        next();
+    }
+});
 
 // Middleware para parsear JSON
 app.use(express.json({ limit: '10mb' }));
