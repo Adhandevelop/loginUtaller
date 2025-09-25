@@ -53,14 +53,36 @@ app.use((req, res, next) => {
 // Rutas de la API
 app.use('/api/auth', authRoutes);
 
-// Ruta de salud del servidor
+// Ruta de salud del servidor - SIMPLE SIN DEPENDENCIAS
 app.get('/api/health', (req, res) => {
-    res.json({ 
+    console.log('🔥 Health endpoint called from:', req.headers.origin || 'no-origin');
+    console.log('🔥 Headers:', JSON.stringify(req.headers, null, 2));
+    
+    // Headers CORS explícitos
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    res.status(200).json({ 
         success: true, 
         message: 'Servidor CineMax funcionando correctamente',
         timestamp: new Date().toISOString(),
         version: '1.0.0',
-        database: 'CockroachDB CineMax'
+        database: 'CockroachDB CineMax',
+        origin: req.headers.origin || 'no-origin',
+        method: req.method,
+        path: req.path
+    });
+});
+
+// Endpoint de test simple
+app.get('/api/test', (req, res) => {
+    console.log('🚀 Test endpoint called');
+    res.header('Access-Control-Allow-Origin', '*');
+    res.status(200).json({ 
+        test: 'OK',
+        timestamp: new Date().toISOString()
     });
 });
 
