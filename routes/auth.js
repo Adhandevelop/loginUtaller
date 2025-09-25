@@ -27,11 +27,11 @@ router.post('/login', async (req, res) => {
         }
 
         // Validaciones de seguridad básicas para login
-        const usernameRegex = /^[a-zA-Z0-9._-]+$/;
+        const usernameRegex = /^[a-zA-Z]+$/;
         if (!usernameRegex.test(username)) {
             return res.status(400).json({
                 success: false,
-                message: 'Usuario contiene caracteres no válidos'
+                message: 'Usuario solo puede contener letras'
             });
         }
 
@@ -208,10 +208,10 @@ function validateRegistrationData({ username, password, nombre, correo, telefono
         return { isValid: false, message: 'El nombre solo puede contener letras y espacios' };
     }
     
-    // Validar que el username no tenga caracteres especiales peligrosos
-    const usernameRegex = /^[a-zA-Z0-9._-]+$/;
+    // Validar que el username solo tenga letras
+    const usernameRegex = /^[a-zA-Z]+$/;
     if (!usernameRegex.test(username)) {
-        return { isValid: false, message: 'El usuario contiene caracteres no permitidos' };
+        return { isValid: false, message: 'El usuario solo puede contener letras' };
     }
     
     // Validar formato de email
