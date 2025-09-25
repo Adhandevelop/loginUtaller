@@ -26,6 +26,22 @@ router.post('/login', async (req, res) => {
             });
         }
 
+        // Validaciones de seguridad básicas para login
+        const usernameRegex = /^[a-zA-Z0-9._-]+$/;
+        if (!usernameRegex.test(username)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Usuario contiene caracteres no válidos'
+            });
+        }
+
+        if (username.length > 50 || password.length > 100) {
+            return res.status(400).json({
+                success: false,
+                message: 'Datos demasiado largos'
+            });
+        }
+
         let query;
         let user = null;
         
@@ -148,16 +164,84 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Función de validación de datos de registro
+function validateRegistrationData({ username, password, nombre, correo, telefono }) {
+    // Validar campos requeridos
+    if (!username || !password || !nombre || !correo) {
+        return { isValid: false, message: 'Todos los campos son requeridos' };
+    }
+    
+    // Validar longitudes mínimas
+    if (username.length < 4) {
+        return { isValid: false, message: 'El usuario debe tener al menos 4 caracteres' };
+    }
+    
+    if (password.length < 9) {
+        return { isValid: false, message: 'La contraseña debe tener al menos 9 caracteres' };
+    }
+    
+    if (nombre.length < 5) {
+        return { isValid: false, message: 'El nombre debe tener al menos 5 caracteres' };
+    }
+    
+    if (correo.length < 9) {
+        return { isValid: false, message: 'El correo debe tener al menos 9 caracteres' };
+    }
+    
+    if (telefono && telefono.length < 9) {
+        return { isValid: false, message: 'El teléfono debe tener al menos 9 caracteres' };
+    }
+    
+    // Validar que la contraseña no tenga espacios ni caracteres peligrosos
+    const passwordRegex = /^[a-zA-Z0-9@#$%^&+=!?._-]+$/;
+    if (!passwordRegex.test(password)) {
+        return { isValid: false, message: 'La contraseña contiene caracteres no permitidos' };
+    }
+    
+    if (password.includes(' ')) {
+        return { isValid: false, message: 'La contraseña no puede contener espacios' };
+    }
+    
+    // Validar que el nombre solo tenga letras y espacios
+    const nombreRegex = /^[a-zA-ZÀ-ÿ\u00f1\u00d1\s]+$/;
+    if (!nombreRegex.test(nombre)) {
+        return { isValid: false, message: 'El nombre solo puede contener letras y espacios' };
+    }
+    
+    // Validar que el username no tenga caracteres especiales peligrosos
+    const usernameRegex = /^[a-zA-Z0-9._-]+$/;
+    if (!usernameRegex.test(username)) {
+        return { isValid: false, message: 'El usuario contiene caracteres no permitidos' };
+    }
+    
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(correo)) {
+        return { isValid: false, message: 'El formato del correo electrónico no es válido' };
+    }
+    
+    // Validar teléfono si se proporciona
+    if (telefono) {
+        const telefonoRegex = /^[0-9\s\-\(\)\+]+$/;
+        if (!telefonoRegex.test(telefono)) {
+            return { isValid: false, message: 'El teléfono contiene caracteres no permitidos' };
+        }
+    }
+    
+    return { isValid: true, message: 'Datos válidos' };
+}
+
 // Registro de clientes
 router.post('/register/cliente', async (req, res) => {
     try {
         const { username, password, nombre, correo, telefono } = req.body;
         
-        // Validar campos requeridos
-        if (!username || !password || !nombre || !correo) {
+        // Validaciones de seguridad
+        const validation = validateRegistrationData({ username, password, nombre, correo, telefono });
+        if (!validation.isValid) {
             return res.status(400).json({
                 success: false,
-                message: 'Username, password, nombre y correo son requeridos'
+                message: validation.message
             });
         }
         
@@ -320,11 +404,12 @@ router.post('/register/trabajador', async (req, res) => {
     try {
         const { username, password, nombre, correo, telefono } = req.body;
         
-        // Validar campos requeridos
-        if (!username || !password || !nombre || !correo) {
+        // Validaciones de seguridad
+        const validation = validateRegistrationData({ username, password, nombre, correo, telefono });
+        if (!validation.isValid) {
             return res.status(400).json({
                 success: false,
-                message: 'Username, password, nombre y correo son requeridos'
+                message: validation.message
             });
         }
         
