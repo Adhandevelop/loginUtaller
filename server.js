@@ -8,18 +8,25 @@ const authRoutes = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware de CORS - configurado para desarrollo local
+// Middleware de CORS - configurado para desarrollo y producción
 app.use(cors({
     origin: [
         'http://localhost:5500', 
         'http://127.0.0.1:5500', 
         'http://localhost:3000',
         'http://localhost:8000',
-        'http://127.0.0.1:8080'
+        'http://127.0.0.1:8080',
+        'http://localhost:8080',
+        'https://localhost:5500',
+        'file://',
+        // Permitir cualquier subdominio de vercel para testing
+        /^https:\/\/.*\.vercel\.app$/,
+        // Permitir acceso desde archivos locales
+        null
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin']
 }));
 
 // Middleware para parsear JSON
