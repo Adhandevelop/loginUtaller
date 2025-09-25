@@ -315,4 +315,87 @@ router.get('/profile', async (req, res) => {
     }
 });
 
+// Registro de trabajadores
+router.post('/register/trabajador', async (req, res) => {
+    try {
+        const { username, password, nombre, correo, telefono } = req.body;
+        
+        // Validar campos requeridos
+        if (!username || !password || !nombre || !correo) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username, password, nombre y correo son requeridos'
+            });
+        }
+        
+        // Verificar si el username o correo ya existen
+        const checkExistingQuery = `
+            SELECT username, correo FROM trabajadores 
+            WHERE username = $1 OR correo = $2
+        `;
+        
+        const existingResult = await queryDatabase(checkExistingQuery, [username, correo]);
+        
+        if (!existingResult.success) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error verificando datos existentes'
+            });
+        }
+        
+        if (existingResult.data.length > 0) {
+            const existing = existingResult.data[0];
+            if (existing.username === username) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El username ya está en uso'
+                });
+            }
+            if (existing.correo === correo) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El correo ya está registrado'
+                });
+            }
+        }
+        
+        // Hash de la contraseña
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Insertar nuevo trabajador
+        const insertQuery = `
+            INSERT INTO trabajadores (username, password_hash, nombre, correo, telefono) 
+            VALUES ($1, $2, $3, $4, $5) 
+            RETURNING id_trabajador as id, username, nombre, correo, telefono
+        `;
+        
+        const insertResult = await queryDatabase(insertQuery, [
+            username, hashedPassword, nombre, correo, telefono || null
+        ]);
+        
+        if (!insertResult.success) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error creando la cuenta'
+            });
+        }
+        
+        const newUser = insertResult.data[0];
+        newUser.userType = 'trabajador';
+        
+        res.status(201).json({
+            success: true,
+            message: 'Trabajador registrado exitosamente',
+            user: newUser
+        });
+        
+    } catch (error) {
+        console.error('Error en registro de trabajador:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
 module.exports = router;
