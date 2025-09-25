@@ -362,15 +362,15 @@ router.post('/register/trabajador', async (req, res) => {
         // Hash de la contraseña
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        // Insertar nuevo trabajador
+        // Insertar nuevo trabajador (con rol por defecto 'empleado')
         const insertQuery = `
-            INSERT INTO trabajadores (username, password_hash, nombre, correo, telefono) 
-            VALUES ($1, $2, $3, $4, $5) 
-            RETURNING id_trabajador as id, username, nombre, correo, telefono
+            INSERT INTO trabajadores (username, password_hash, nombre, correo, telefono, rol) 
+            VALUES ($1, $2, $3, $4, $5, $6) 
+            RETURNING id_trabajador as id, username, nombre, correo, telefono, rol
         `;
         
         const insertResult = await queryDatabase(insertQuery, [
-            username, hashedPassword, nombre, correo, telefono || null
+            username, hashedPassword, nombre, correo, telefono || null, 'empleado'
         ]);
         
         if (!insertResult.success) {
