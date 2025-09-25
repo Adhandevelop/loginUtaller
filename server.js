@@ -8,26 +8,63 @@ const authRoutes = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware de CORS - Permitir todo para solucionar problemas
-app.use(cors({
-    origin: true, // Permitir cualquier origen durante desarrollo
+// CORS específico para Vercel
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Permitir requests sin origin (mobile apps, postman, etc.)
+        if (!origin) return callback(null, true);
+        
+        // Lista de dominios permitidos
+        const allowedOrigins = [
+            'http://localhost:5500',
+            'http://127.0.0.1:5500',
+            'http://localhost:3000',
+            'https://loginutallerf.vercel.app',
+            'https://loginutallerf-git-main-adhams-projects-9fde8db9.vercel.app',
+            /^https:\/\/loginutallerf.*\.vercel\.app$/,
+            /^https:\/\/.*\.vercel\.app$/
+        ];
+        
+        const isAllowed = allowedOrigins.some(allowedOrigin => {
+            if (typeof allowedOrigin === 'string') {
+                return origin === allowedOrigin;
+            } else if (allowedOrigin instanceof RegExp) {
+                return allowedOrigin.test(origin);
+            }
+            return false;
+        });
+        
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            console.log('❌ CORS bloqueado para origen:', origin);
+            callback(null, true); // Permitir temporalmente
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
     optionsSuccessStatus: 200
-}));
+};
 
-// Headers adicionales para CORS
+app.use(cors(corsOptions));
+
+// Headers adicionales de respaldo
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    const origin = req.headers.origin;
+    if (origin && (origin.includes('vercel.app') || origin.includes('localhost'))) {
+        res.header('Access-Control-Allow-Origin', origin);
+    } else {
+        res.header('Access-Control-Allow-Origin', '*');
+    }
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
     
     if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-    } else {
-        next();
+        return res.status(200).end();
     }
+    next();
 });
 
 // Middleware para parsear JSON
