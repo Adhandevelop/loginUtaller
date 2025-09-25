@@ -8,64 +8,37 @@ const authRoutes = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS específico para Vercel
-const corsOptions = {
-    origin: function (origin, callback) {
-        // Permitir requests sin origin (mobile apps, postman, etc.)
-        if (!origin) return callback(null, true);
-        
-        // Lista de dominios permitidos
-        const allowedOrigins = [
-            'http://localhost:5500',
-            'http://127.0.0.1:5500',
-            'http://localhost:3000',
-            'https://loginutallerf.vercel.app',
-            'https://loginutallerf-git-main-adhams-projects-9fde8db9.vercel.app',
-            /^https:\/\/loginutallerf.*\.vercel\.app$/,
-            /^https:\/\/.*\.vercel\.app$/
-        ];
-        
-        const isAllowed = allowedOrigins.some(allowedOrigin => {
-            if (typeof allowedOrigin === 'string') {
-                return origin === allowedOrigin;
-            } else if (allowedOrigin instanceof RegExp) {
-                return allowedOrigin.test(origin);
-            }
-            return false;
-        });
-        
-        if (isAllowed) {
-            callback(null, true);
-        } else {
-            console.log('❌ CORS bloqueado para origen:', origin);
-            callback(null, true); // Permitir temporalmente
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-    optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-
-// Headers adicionales de respaldo
+// CORS MAXIMAL - Permitir absolutamente todo temporalmente
 app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin && (origin.includes('vercel.app') || origin.includes('localhost'))) {
-        res.header('Access-Control-Allow-Origin', origin);
-    } else {
-        res.header('Access-Control-Allow-Origin', '*');
-    }
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    console.log(`🌐 Request: ${req.method} ${req.path} from origin: ${req.headers.origin || 'no-origin'}`);
     
+    // Permitir cualquier origen
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma');
+    res.header('Access-Control-Max-Age', '3600');
+    
+    // Manejar preflight OPTIONS
     if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+        console.log('✅ Respondiendo a preflight OPTIONS request');
+        return res.status(200).json({
+            success: true,
+            message: 'CORS preflight OK'
+        });
     }
+    
     next();
 });
+
+// CORS adicional con cors package
+app.use(cors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Cache-Control', 'Pragma'],
+    optionsSuccessStatus: 200
+}));
 
 // Middleware para parsear JSON
 app.use(express.json({ limit: '10mb' }));
