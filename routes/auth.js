@@ -689,24 +689,31 @@ router.get('/datos-excel', async (req, res) => {
             });
         }
         
-        // Convertir campos BYTES a string simple
+        // Mostrar campos BYTES en su formato hexadecimal original
         const processedData = result.data.map(row => {
             const processedRow = { ...row };
             
-            // Convertir campos binarios a string directamente
+            // Para campos binarios, mostrar en formato hexadecimal
             ['identificacion', 'vrcto'].forEach(fieldName => {
                 if (processedRow[fieldName] && typeof processedRow[fieldName] === 'object') {
                     try {
-                        // Intentar convertir a string UTF-8
+                        let buffer;
                         if (Buffer.isBuffer(processedRow[fieldName])) {
-                            processedRow[fieldName] = processedRow[fieldName].toString('utf8');
+                            buffer = processedRow[fieldName];
+                        } else if (processedRow[fieldName].data) {
+                            buffer = Buffer.from(processedRow[fieldName].data);
                         } else {
-                            // Para otros objetos, convertir a Buffer primero
-                            processedRow[fieldName] = Buffer.from(processedRow[fieldName]).toString('utf8');
+                            buffer = Buffer.from(processedRow[fieldName]);
                         }
+                        
+                        // Convertir a formato hexadecimal con \x
+                        const hexString = buffer.toString('hex');
+                        const formattedHex = hexString.replace(/../g, '\\x$&');
+                        processedRow[fieldName] = formattedHex;
+                        
                     } catch (e) {
-                        // Si falla, usar toString() básico
-                        processedRow[fieldName] = processedRow[fieldName].toString();
+                        console.log(`Error procesando campo ${fieldName}:`, e.message);
+                        processedRow[fieldName] = '[Error en datos binarios]';
                     }
                 }
             });
