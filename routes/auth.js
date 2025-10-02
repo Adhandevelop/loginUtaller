@@ -689,12 +689,38 @@ router.get('/datos-excel', async (req, res) => {
             });
         }
         
-        console.log('✅ Datos obtenidos correctamente:', result.data.length, 'registros');
+        // Procesar los datos para convertir campos BYTES cuando sea posible
+        const processedData = result.data.map(row => {
+            const processedRow = { ...row };
+            
+            // Procesar campos que pueden ser BYTES pero contienen texto
+            ['identificacion', 'vrcto'].forEach(fieldName => {
+                if (processedRow[fieldName] && typeof processedRow[fieldName] === 'object') {
+                    try {
+                        // Si es un Buffer, convertir a string
+                        if (Buffer.isBuffer(processedRow[fieldName])) {
+                            processedRow[fieldName] = processedRow[fieldName].toString('utf8');
+                        }
+                        // Si es un array de bytes, convertir a string
+                        else if (Array.isArray(processedRow[fieldName])) {
+                            processedRow[fieldName] = String.fromCharCode.apply(null, processedRow[fieldName]);
+                        }
+                    } catch (e) {
+                        console.log(`Error procesando campo ${fieldName}:`, e.message);
+                        // Mantener el valor original si hay error
+                    }
+                }
+            });
+            
+            return processedRow;
+        });
+        
+        console.log('✅ Datos obtenidos y procesados correctamente:', processedData.length, 'registros');
         res.json({
             success: true,
             message: 'Datos obtenidos exitosamente',
-            data: result.data,
-            count: result.data.length
+            data: processedData,
+            count: processedData.length
         });
         
     } catch (error) {
