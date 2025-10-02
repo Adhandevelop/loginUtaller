@@ -551,7 +551,10 @@ router.get('/verificar-tabla', async (req, res) => {
         const searchTablesQuery = `
             SELECT table_name, table_schema
             FROM information_schema.tables 
-            WHERE table_name ILIKE '%datos%' OR table_name ILIKE '%excel%'
+            WHERE table_name ILIKE '%datos%excel%' 
+               OR table_name = 'datosexcel'
+               OR table_name = 'datosExcel'
+               OR table_name ILIKE '%excel%'
             ORDER BY table_name;
         `;
         
@@ -632,10 +635,30 @@ router.get('/datos-excel', async (req, res) => {
         // Verificar token JWT
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cinemax_secret_key');
         
-        // Consultar la tabla datosexcel
+        // Primero verificar qué tabla existe realmente
+        const findTableQuery = `
+            SELECT table_name
+            FROM information_schema.tables 
+            WHERE table_name ILIKE '%datos%excel%' OR table_name = 'datosexcel'
+            LIMIT 1
+        `;
+        
+        const tableResult = await queryDatabase(findTableQuery, []);
+        
+        if (!tableResult.success || tableResult.data.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontró una tabla de datos Excel'
+            });
+        }
+        
+        const actualTableName = tableResult.data[0].table_name;
+        console.log('📋 Usando tabla:', actualTableName);
+        
+        // Consultar la tabla encontrada
         const query = `
             SELECT id, nrocto, contratista, identificacion, objeto, cdp, tiempo, vrcto, unidad, rubro
-            FROM datosexcel
+            FROM ${actualTableName}
             ORDER BY id ASC
         `;
         
