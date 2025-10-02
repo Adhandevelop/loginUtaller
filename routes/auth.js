@@ -689,31 +689,14 @@ router.get('/datos-excel', async (req, res) => {
             });
         }
         
-        // Procesar campos BYTES para mostrar contenido legible
+        // Procesar campos BYTES para mostrar indicador simple
         const processedData = result.data.map(row => {
             const processedRow = { ...row };
             
-            // Procesar tanto identificacion como vrcto si son objetos
+            // Para campos binarios, solo mostrar un indicador de que son binarios
             ['identificacion', 'vrcto'].forEach(fieldName => {
                 if (processedRow[fieldName] && typeof processedRow[fieldName] === 'object') {
-                    try {
-                        // Si es un Buffer, convertir a string
-                        if (Buffer.isBuffer(processedRow[fieldName])) {
-                            processedRow[fieldName] = processedRow[fieldName].toString('utf8');
-                        }
-                        // Si es un array de bytes, convertir a string
-                        else if (Array.isArray(processedRow[fieldName])) {
-                            processedRow[fieldName] = String.fromCharCode.apply(null, processedRow[fieldName]);
-                        }
-                        // Si es un objeto con propiedad data
-                        else if (processedRow[fieldName].data) {
-                            processedRow[fieldName] = Buffer.from(processedRow[fieldName].data).toString('utf8');
-                        }
-                    } catch (e) {
-                        console.log(`Error procesando campo ${fieldName}:`, e.message);
-                        // Si falla la conversión, convertir a string de forma segura
-                        processedRow[fieldName] = JSON.stringify(processedRow[fieldName]);
-                    }
+                    processedRow[fieldName] = '[Datos binarios]';
                 }
             });
             
