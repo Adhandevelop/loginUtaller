@@ -689,14 +689,25 @@ router.get('/datos-excel', async (req, res) => {
             });
         }
         
-        // Procesar campos BYTES para mostrar indicador simple
+        // Convertir campos BYTES a string simple
         const processedData = result.data.map(row => {
             const processedRow = { ...row };
             
-            // Para campos binarios, solo mostrar un indicador de que son binarios
+            // Convertir campos binarios a string directamente
             ['identificacion', 'vrcto'].forEach(fieldName => {
                 if (processedRow[fieldName] && typeof processedRow[fieldName] === 'object') {
-                    processedRow[fieldName] = '[Datos binarios]';
+                    try {
+                        // Intentar convertir a string UTF-8
+                        if (Buffer.isBuffer(processedRow[fieldName])) {
+                            processedRow[fieldName] = processedRow[fieldName].toString('utf8');
+                        } else {
+                            // Para otros objetos, convertir a Buffer primero
+                            processedRow[fieldName] = Buffer.from(processedRow[fieldName]).toString('utf8');
+                        }
+                    } catch (e) {
+                        // Si falla, usar toString() básico
+                        processedRow[fieldName] = processedRow[fieldName].toString();
+                    }
                 }
             });
             
