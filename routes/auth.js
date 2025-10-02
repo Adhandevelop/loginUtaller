@@ -689,28 +689,26 @@ router.get('/datos-excel', async (req, res) => {
             });
         }
         
-        // Procesar los datos para convertir campos BYTES cuando sea posible
+        // Procesar solo el campo vrcto, dejar identificacion tal como viene de la BD
         const processedData = result.data.map(row => {
             const processedRow = { ...row };
             
-            // Procesar campos que pueden ser BYTES pero contienen texto
-            ['identificacion', 'vrcto'].forEach(fieldName => {
-                if (processedRow[fieldName] && typeof processedRow[fieldName] === 'object') {
-                    try {
-                        // Si es un Buffer, convertir a string
-                        if (Buffer.isBuffer(processedRow[fieldName])) {
-                            processedRow[fieldName] = processedRow[fieldName].toString('utf8');
-                        }
-                        // Si es un array de bytes, convertir a string
-                        else if (Array.isArray(processedRow[fieldName])) {
-                            processedRow[fieldName] = String.fromCharCode.apply(null, processedRow[fieldName]);
-                        }
-                    } catch (e) {
-                        console.log(`Error procesando campo ${fieldName}:`, e.message);
-                        // Mantener el valor original si hay error
+            // Solo procesar vrcto, dejar identificacion sin modificar
+            if (processedRow['vrcto'] && typeof processedRow['vrcto'] === 'object') {
+                try {
+                    // Si es un Buffer, convertir a string
+                    if (Buffer.isBuffer(processedRow['vrcto'])) {
+                        processedRow['vrcto'] = processedRow['vrcto'].toString('utf8');
                     }
+                    // Si es un array de bytes, convertir a string
+                    else if (Array.isArray(processedRow['vrcto'])) {
+                        processedRow['vrcto'] = String.fromCharCode.apply(null, processedRow['vrcto']);
+                    }
+                } catch (e) {
+                    console.log(`Error procesando campo vrcto:`, e.message);
+                    // Mantener el valor original si hay error
                 }
-            });
+            }
             
             return processedRow;
         });
