@@ -483,6 +483,55 @@ router.post('/register/trabajador', async (req, res) => {
     }
 });
 
+// Endpoint para listar todas las tablas disponibles
+router.get('/listar-tablas', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: 'Token no proporcionado'
+        });
+    }
+    
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cinemax_secret_key');
+        
+        // Listar todas las tablas en la base de datos
+        const listTablesQuery = `
+            SELECT table_name, table_schema
+            FROM information_schema.tables 
+            WHERE table_type = 'BASE TABLE'
+            ORDER BY table_name;
+        `;
+        
+        const tablesResult = await queryDatabase(listTablesQuery, []);
+        console.log('📋 Listando todas las tablas:', tablesResult);
+        
+        if (!tablesResult.success) {
+            return res.json({
+                success: false,
+                message: 'Error listando tablas',
+                tables: []
+            });
+        }
+        
+        res.json({
+            success: true,
+            tables: tablesResult.data,
+            message: `Se encontraron ${tablesResult.data.length} tablas`
+        });
+        
+    } catch (error) {
+        console.error('Error listando tablas:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno listando tablas'
+        });
+    }
+});
+
 // Endpoint para verificar la tabla datosexcel
 router.get('/verificar-tabla', async (req, res) => {
     const authHeader = req.headers.authorization;
@@ -498,42 +547,64 @@ router.get('/verificar-tabla', async (req, res) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cinemax_secret_key');
         
-        // Verificar si la tabla existe
-        const checkTableQuery = `
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_name = 'datosexcel'
-            );
+        // Buscar la tabla con diferentes variantes del nombre
+        const searchTablesQuery = `
+            SELECT table_name, table_schema
+            FROM information_schema.tables 
+            WHERE table_name ILIKE '%datos%' OR table_name ILIKE '%excel%'
+            ORDER BY table_name;
         `;
         
-        const tableResult = await queryDatabase(checkTableQuery, []);
-        console.log('🔍 Verificando tabla datosexcel:', tableResult);
+        const searchResult = await queryDatabase(searchTablesQuery, []);
+        console.log('🔍 Buscando tablas con "datos" o "excel":', searchResult);
         
-        if (!tableResult.success) {
+        if (!searchResult.success) {
             return res.json({
                 success: false,
-                message: 'Error verificando tabla',
+                message: 'Error buscando tablas',
                 tableExists: false,
                 recordCount: 0
             });
         }
         
-        const tableExists = tableResult.data[0].exists;
-        let recordCount = 0;
+        const possibleTables = searchResult.data;
         
-        if (tableExists) {
-            const countQuery = 'SELECT COUNT(*) as total FROM datosexcel';
-            const countResult = await queryDatabase(countQuery, []);
-            if (countResult.success) {
-                recordCount = parseInt(countResult.data[0].total);
+        // Si no encuentra ninguna tabla relacionada
+        if (possibleTables.length === 0) {
+            return res.json({
+                success: true,
+                tableExists: false,
+                recordCount: 0,
+                possibleTables: [],
+                message: 'No se encontraron tablas relacionadas con "datos" o "excel"'
+            });
+        }
+        
+        // Intentar contar registros de cada tabla posible
+        const tablesInfo = [];
+        for (const table of possibleTables) {
+            try {
+                const countQuery = `SELECT COUNT(*) as total FROM ${table.table_name}`;
+                const countResult = await queryDatabase(countQuery, []);
+                tablesInfo.push({
+                    name: table.table_name,
+                    schema: table.table_schema,
+                    count: countResult.success ? parseInt(countResult.data[0].total) : 'Error'
+                });
+            } catch (err) {
+                tablesInfo.push({
+                    name: table.table_name,
+                    schema: table.table_schema,
+                    count: 'Error acceso'
+                });
             }
         }
         
         res.json({
             success: true,
-            tableExists,
-            recordCount,
-            message: `Tabla existe: ${tableExists}, Registros: ${recordCount}`
+            tableExists: possibleTables.length > 0,
+            possibleTables: tablesInfo,
+            message: `Se encontraron ${possibleTables.length} tablas relacionadas`
         });
         
     } catch (error) {
