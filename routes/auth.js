@@ -689,26 +689,33 @@ router.get('/datos-excel', async (req, res) => {
             });
         }
         
-        // Procesar solo el campo vrcto, dejar identificacion tal como viene de la BD
+        // Procesar campos BYTES para mostrar contenido legible
         const processedData = result.data.map(row => {
             const processedRow = { ...row };
             
-            // Solo procesar vrcto, dejar identificacion sin modificar
-            if (processedRow['vrcto'] && typeof processedRow['vrcto'] === 'object') {
-                try {
-                    // Si es un Buffer, convertir a string
-                    if (Buffer.isBuffer(processedRow['vrcto'])) {
-                        processedRow['vrcto'] = processedRow['vrcto'].toString('utf8');
+            // Procesar tanto identificacion como vrcto si son objetos
+            ['identificacion', 'vrcto'].forEach(fieldName => {
+                if (processedRow[fieldName] && typeof processedRow[fieldName] === 'object') {
+                    try {
+                        // Si es un Buffer, convertir a string
+                        if (Buffer.isBuffer(processedRow[fieldName])) {
+                            processedRow[fieldName] = processedRow[fieldName].toString('utf8');
+                        }
+                        // Si es un array de bytes, convertir a string
+                        else if (Array.isArray(processedRow[fieldName])) {
+                            processedRow[fieldName] = String.fromCharCode.apply(null, processedRow[fieldName]);
+                        }
+                        // Si es un objeto con propiedad data
+                        else if (processedRow[fieldName].data) {
+                            processedRow[fieldName] = Buffer.from(processedRow[fieldName].data).toString('utf8');
+                        }
+                    } catch (e) {
+                        console.log(`Error procesando campo ${fieldName}:`, e.message);
+                        // Si falla la conversión, convertir a string de forma segura
+                        processedRow[fieldName] = JSON.stringify(processedRow[fieldName]);
                     }
-                    // Si es un array de bytes, convertir a string
-                    else if (Array.isArray(processedRow['vrcto'])) {
-                        processedRow['vrcto'] = String.fromCharCode.apply(null, processedRow['vrcto']);
-                    }
-                } catch (e) {
-                    console.log(`Error procesando campo vrcto:`, e.message);
-                    // Mantener el valor original si hay error
                 }
-            }
+            });
             
             return processedRow;
         });
