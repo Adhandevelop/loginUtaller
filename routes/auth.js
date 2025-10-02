@@ -483,4 +483,60 @@ router.post('/register/trabajador', async (req, res) => {
     }
 });
 
+// Obtener datos de la tabla datosExcel (requiere autenticación)
+router.get('/datos-excel', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: 'Token no proporcionado'
+        });
+    }
+    
+    try {
+        // Verificar token JWT
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cinemax_secret_key');
+        
+        // Consultar la tabla datosExcel
+        const query = `
+            SELECT *
+            FROM "datosExcel"
+            ORDER BY id ASC
+        `;
+        
+        const result = await queryDatabase(query, []);
+        
+        if (!result.success) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error consultando los datos'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Datos obtenidos exitosamente',
+            data: result.data,
+            count: result.data.length
+        });
+        
+    } catch (error) {
+        console.error('Error obteniendo datos de Excel:', error);
+        
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({
+                success: false,
+                message: 'Token inválido'
+            });
+        }
+        
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
 module.exports = router;
