@@ -483,6 +483,68 @@ router.post('/register/trabajador', async (req, res) => {
     }
 });
 
+// Endpoint para verificar la tabla datosexcel
+router.get('/verificar-tabla', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: 'Token no proporcionado'
+        });
+    }
+    
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cinemax_secret_key');
+        
+        // Verificar si la tabla existe
+        const checkTableQuery = `
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'datosexcel'
+            );
+        `;
+        
+        const tableResult = await queryDatabase(checkTableQuery, []);
+        console.log('🔍 Verificando tabla datosexcel:', tableResult);
+        
+        if (!tableResult.success) {
+            return res.json({
+                success: false,
+                message: 'Error verificando tabla',
+                tableExists: false,
+                recordCount: 0
+            });
+        }
+        
+        const tableExists = tableResult.data[0].exists;
+        let recordCount = 0;
+        
+        if (tableExists) {
+            const countQuery = 'SELECT COUNT(*) as total FROM datosexcel';
+            const countResult = await queryDatabase(countQuery, []);
+            if (countResult.success) {
+                recordCount = parseInt(countResult.data[0].total);
+            }
+        }
+        
+        res.json({
+            success: true,
+            tableExists,
+            recordCount,
+            message: `Tabla existe: ${tableExists}, Registros: ${recordCount}`
+        });
+        
+    } catch (error) {
+        console.error('Error verificando tabla:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno verificando tabla'
+        });
+    }
+});
+
 // Obtener datos de la tabla datosExcel (requiere autenticación)
 router.get('/datos-excel', async (req, res) => {
     const authHeader = req.headers.authorization;
@@ -506,15 +568,34 @@ router.get('/datos-excel', async (req, res) => {
             ORDER BY id ASC
         `;
         
+        console.log('🔍 Ejecutando query para datosexcel...');
         const result = await queryDatabase(query, []);
         
+        console.log('📊 Resultado de la consulta:', {
+            success: result.success,
+            dataLength: result.data ? result.data.length : 0,
+            error: result.error || 'ninguno'
+        });
+        
         if (!result.success) {
+            console.error('❌ Error en query datosexcel:', result.error);
             return res.status(500).json({
                 success: false,
-                message: 'Error consultando los datos'
+                message: 'Error consultando los datos: ' + (result.error || 'Error desconocido')
             });
         }
         
+        if (!result.data || result.data.length === 0) {
+            console.log('⚠️ No se encontraron datos en datosexcel');
+            return res.json({
+                success: true,
+                message: 'Consulta exitosa pero sin datos',
+                data: [],
+                count: 0
+            });
+        }
+        
+        console.log('✅ Datos obtenidos correctamente:', result.data.length, 'registros');
         res.json({
             success: true,
             message: 'Datos obtenidos exitosamente',
