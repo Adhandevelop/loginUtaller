@@ -499,10 +499,10 @@ router.get('/datos-excel', async (req, res) => {
         // Verificar token JWT
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cinemax_secret_key');
         
-        // Consultar la tabla datosExcel
+        // Consultar la tabla datosexcel
         const query = `
-            SELECT *
-            FROM "datosExcel"
+            SELECT id, nrocto, contratista, identificacion, objeto, cdp, tiempo, vrcto, unidad, rubro
+            FROM datosexcel
             ORDER BY id ASC
         `;
         
